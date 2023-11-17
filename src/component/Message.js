@@ -1,46 +1,54 @@
 import React, { useEffect, useState } from "react";
-import { useUserContext } from '../context/UserContext';
-import { useMessageContext } from '../context/MessageContext';
+import { useChatContext } from "../context/ChatContext";
+import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const items = JSON.parse(localStorage.getItem('items'));
+const items = JSON.parse(localStorage.getItem("items"));
 export default function Message() {
-
-  const { sUser, aMessages } = useUserContext();
+  const socket = useSocket();
+  const { sUser, allMessages, selectMessages } = useChatContext();
   const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState('');
-  let authUser = JSON.parse(localStorage.getItem('items'));
-  const { newMessage, selectMessage } = useMessageContext();
+  const [message, setMessage] = useState("");
+  let authUser = JSON.parse(localStorage.getItem("items"));
 
   const handleTextAreaChange = (e) => {
     setMessage(e.target.value);
+    console.log("message type", e.target.value);
+    socket.emit("typing", {
+      from_user_id: items.id,
+      to_user_id: sUser.id,
+      message: e.target.value,
+    });
   };
 
   useEffect(() => {
-    setMessages(aMessages);
-  }, [aMessages]);
+    setMessages(allMessages);
+  }, [allMessages])
 
-  const submit = async e => {
+  const submit = async (e) => {
     e.preventDefault();
 
     try {
       const data = {
-        receiver_id: sUser.id,
-        msg: message
+        from_user_id: items.id,
+        to_user_id: sUser.id,
+        chat_message: message,
       };
-      const token = items.token;
 
-      // Set up the headers with the token
       const headers = {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${items.token}`,
         // other headers if needed
       };
-      const response = await axios.post('http://127.0.0.1:8000/api/v1/send-message', data, { headers });
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/v1/send-message",
+        data,
+        { headers }
+      );
 
       if (response?.status === 201) {
-        selectMessage(data);
-        setMessage('');
+        socket.emit("sendChatToClient", data);
+        setMessage("");
       } else {
         toast.warning("warning", response?.status);
       }
@@ -54,30 +62,33 @@ export default function Message() {
         toast.error(`${firstError}`);
       });
     }
-  }
+  };
 
   return (
     <>
       <div className="flex flex-col flex-auto h-full p-6">
-        <div
-          className="flex flex-col flex-auto flex-shrink-0 rounded-2xl bg-gray-100 h-full p-4"
-        >
+        <div className="flex flex-col flex-auto flex-shrink-0 rounded-2xl bg-gray-100 h-full p-4">
           <div className="flex flex-col h-full overflow-x-auto mb-4">
             <div className="flex flex-col h-full">
               <div className="grid grid-cols-12 gap-y-2">
-                {messages?.map((message) => {
+              {/* {console.log("All Message final result", allMessages)} */}
+                {messages?.map((message, index) => {
                   const isSender = message.from_user_id === authUser.id;
-                  const messageClass = isSender ? 'col-start-6 col-end-13' : 'col-start-1 col-end-8';
-                  const bgColorClass = isSender ? 'mr-3 bg-indigo-100' : 'ml-3 bg-white';
-                  const msgSideClass = isSender ? 'items-center justify-start flex-row-reverse' : 'flex-row items-center';
+                  const messageClass = isSender
+                    ? "col-start-6 col-end-13"
+                    : "col-start-1 col-end-8";
+                  const bgColorClass = isSender
+                    ? "mr-3 bg-indigo-100"
+                    : "ml-3 bg-white";
+                  const msgSideClass = isSender
+                    ? "items-center justify-start flex-row-reverse"
+                    : "flex-row items-center";
 
                   return (
                     <>
-                      <div className={`${messageClass} p-3 rounded-lg`}>
+                      <div key={index} className={`${messageClass} p-3 rounded-lg`}>
                         <div className={`flex ${msgSideClass}`}>
-                          <div
-                            className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-500 flex-shrink-0"
-                          >
+                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-500 flex-shrink-0">
                             {message.from_user_id}
                           </div>
                           <div
@@ -93,21 +104,17 @@ export default function Message() {
               </div>
             </div>
           </div>
-          <div
-            className="flex flex-row items-center h-16 rounded-xl bg-white w-full px-4"
-          >
-
+          <div className="flex flex-row items-center h-16 rounded-xl bg-white w-full px-4">
             <div className="flex-grow ml-4">
               <div className="relative w-full">
                 <input
                   type="text"
                   id="messageInput"
                   className="flex w-full border rounded-xl focus:outline-none focus:border-indigo-300 pl-4 h-10"
-                  value={message} onChange={handleTextAreaChange}
+                  value={message}
+                  onChange={handleTextAreaChange}
                 />
-                <button
-                  className="absolute flex items-center justify-center h-full w-12 right-0 top-0 text-gray-400 hover:text-gray-600"
-                >
+                <button className="absolute flex items-center justify-center h-full w-12 right-0 top-0 text-gray-400 hover:text-gray-600">
                   <svg
                     className="w-6 h-6"
                     fill="none"
@@ -150,8 +157,8 @@ export default function Message() {
               </button>
             </div>
           </div>
-        </div >
-      </div >
+        </div>
+      </div>
     </>
   );
 }
