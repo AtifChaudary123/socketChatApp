@@ -3,28 +3,53 @@ import { useChatContext } from "../context/ChatContext";
 import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import io from "socket.io-client";
+const socket = io("http://localhost:3001");
 
 const items = JSON.parse(localStorage.getItem("items"));
+
+console.log("socket", socket.id);
 export default function Message() {
-  const socket = useSocket();
+  // const socket = useSocket();
   const { sUser, allMessages, selectMessages } = useChatContext();
-  const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  // const [myMessages, setMyMessages] = useState([]);
   let authUser = JSON.parse(localStorage.getItem("items"));
 
   const handleTextAreaChange = (e) => {
     setMessage(e.target.value);
-    console.log("message type", e.target.value);
     socket.emit("typing", {
       from_user_id: items.id,
       to_user_id: sUser.id,
-      message: e.target.value,
+      chat_message: e.target.value,
     });
   };
 
-  useEffect(() => {
+  /* useEffect(() => {
     setMessages(allMessages);
-  }, [allMessages])
+  }, [allMessages]) */
+
+  // console.log("messages", allMessages);
+
+  useEffect(() => {
+    console.log("Socket in useEffect:", socket, allMessages);
+
+    socket.on('roomConnection', (data) => {
+      console.log('data', data)
+      socket.roomId = data.roomId
+    })
+    
+    socket.on("sendChatToServer", (data) => {
+      console.log("socket receuive", data);
+
+      // if (!allMessages.some((item) => item.id === data.id)) {
+      // selectMessages(data);
+      // if (data.from === socket.id) {
+        selectMessages(data);
+      // }
+      // }
+    });
+  }, [socket]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -46,9 +71,12 @@ export default function Message() {
         { headers }
       );
 
+      console.log("data", response.data);
+
       if (response?.status === 201) {
-        socket.emit("sendChatToClient", data);
+        socket.emit("sendChatToClient", {...response.data.data, to: socket.roomId});
         setMessage("");
+        // selectMessages(data);
       } else {
         toast.warning("warning", response?.status);
       }
@@ -71,8 +99,8 @@ export default function Message() {
           <div className="flex flex-col h-full overflow-x-auto mb-4">
             <div className="flex flex-col h-full">
               <div className="grid grid-cols-12 gap-y-2">
-              {/* {console.log("All Message final result", allMessages)} */}
-                {messages?.map((message, index) => {
+                {/* {console.log("All Message final result", allMessages)} */}
+                {allMessages?.map((message) => {
                   const isSender = message.from_user_id === authUser.id;
                   const messageClass = isSender
                     ? "col-start-6 col-end-13"
@@ -86,7 +114,10 @@ export default function Message() {
 
                   return (
                     <>
-                      <div key={index} className={`${messageClass} p-3 rounded-lg`}>
+                      <div
+                        key={message.id}
+                        className={`${messageClass} p-3 rounded-lg`}
+                      >
                         <div className={`flex ${msgSideClass}`}>
                           <div className="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-500 flex-shrink-0">
                             {message.from_user_id}
@@ -114,22 +145,6 @@ export default function Message() {
                   value={message}
                   onChange={handleTextAreaChange}
                 />
-                <button className="absolute flex items-center justify-center h-full w-12 right-0 top-0 text-gray-400 hover:text-gray-600">
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    ></path>
-                  </svg>
-                </button>
               </div>
             </div>
             <div className="ml-4">

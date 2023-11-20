@@ -11,20 +11,20 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: (
-      <SocketProvider>
-        <RootLayout />
-      </SocketProvider>
+      // <SocketProvider>
+      <RootLayout />
+      // </SocketProvider>
     ),
     children: [
       { path: "/", element: <LoginPage /> },
       {
         path: "/chat",
         element: (
-          <SocketProvider>
-            <ChatProvider>
-              <ChatPage />
-            </ChatProvider>
-          </SocketProvider>
+          // <SocketProvider>
+          <ChatProvider>
+            <ChatPage />
+          </ChatProvider>
+          // </SocketProvider>
         ),
       },
     ],

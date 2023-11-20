@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 //import { useSocket } from "../context/SocketContext";
-import io from 'socket.io-client';
+// import io from "socket.io-client";
 
 const ChatContext = createContext();
 const items = JSON.parse(localStorage.getItem("items"));
 
-
 export const ChatProvider = ({ children }) => {
-  const socket = io('http://localhost:3001');
+  // const socket = io("http://localhost:3001");
   //const socket = useSocket();
   const [sUser, setUser] = useState({});
   const [allMessages, setMessages] = useState([]);
@@ -33,7 +32,7 @@ export const ChatProvider = ({ children }) => {
       if (response?.status === 200) {
         let allMessages = response?.data?.data;
         setMessages(allMessages);
-        /* console.log("context message", allMessages); */
+        console.log("context message", allMessages);
       }
     } catch (error) {
       console.log("context message", error);
@@ -41,16 +40,8 @@ export const ChatProvider = ({ children }) => {
   };
 
   const selectMessages = (message) => {
-    setMessages(prevMessage => [...prevMessage, message]);
+    setMessages([...allMessages, message]);
   };
-
-  useEffect(() => {
-    console.log("Socket in useEffect:", socket);
-    socket.on("sendChatToServer", (data) => {
-      /* console.log("socket receuive", data); */
-      selectMessages(data);
-    });
-  }, [socket]);
 
   const selectNewMessages = (message) => {
     setNewMessages(message);
