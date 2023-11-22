@@ -28,6 +28,7 @@ export default function Login() {
         toast.success("Login Succesfull");
         //setItems(data.data);
         navigate('/chat');
+        window.location.reload();
       } else {
         toast.warning("warning", response?.status);
       }

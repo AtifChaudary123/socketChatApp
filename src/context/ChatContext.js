@@ -41,6 +41,7 @@ export const ChatProvider = ({ children }) => {
 
   const selectMessages = (message) => {
     setMessages([...allMessages, message]);
+    //setMessages((prevMessages) => [...prevMessages, message]);
   };
 
   const selectNewMessages = (message) => {

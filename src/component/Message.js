@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useChatContext } from "../context/ChatContext";
-import { useSocket } from "../context/SocketContext";
+//import { useSocket } from "../context/SocketContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import io from "socket.io-client";
@@ -8,12 +8,13 @@ const socket = io("http://localhost:3001");
 
 const items = JSON.parse(localStorage.getItem("items"));
 
-console.log("socket", socket.id);
+//console.log("socket", socket.id);
 export default function Message() {
   // const socket = useSocket();
   const { sUser, allMessages, selectMessages } = useChatContext();
   const [message, setMessage] = useState("");
-  // const [myMessages, setMyMessages] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const messagesEndRef = useRef(null);
   let authUser = JSON.parse(localStorage.getItem("items"));
 
   const handleTextAreaChange = (e) => {
@@ -25,31 +26,40 @@ export default function Message() {
     });
   };
 
-  /* useEffect(() => {
-    setMessages(allMessages);
-  }, [allMessages]) */
-
-  // console.log("messages", allMessages);
+  useEffect(() => {
+    // Scroll to the end when messages are updated
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
-    console.log("Socket in useEffect:", socket, allMessages);
+    setMessages(allMessages);
+  }, [allMessages]);
 
-    socket.on('roomConnection', (data) => {
+  useEffect(() => {
+    //console.log("Socket in useEffect:", socket, allMessages);
+
+    /* socket.on('roomConnection', (data) => {
       console.log('data', data)
       socket.roomId = data.roomId
-    })
-    
+    }) */
+
     socket.on("sendChatToServer", (data) => {
       console.log("socket receuive", data);
+      selectMessages(data);
 
-      // if (!allMessages.some((item) => item.id === data.id)) {
-      // selectMessages(data);
-      // if (data.from === socket.id) {
+      /* if (!allMessages.some((item) => item.id === data.id)) {
         selectMessages(data);
-      // }
-      // }
+        // if (data.from === socket.id) {
+        //   selectMessages(data);
+        // } 
+      } */
     });
-  }, [socket]);
+  }, [socket, messages]);
+
+  const scrollToBottom = () => {
+    // Using current to access the DOM element
+    messagesEndRef.current.scrollIntoView({ behavior: 'smooth',  });
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -63,7 +73,6 @@ export default function Message() {
 
       const headers = {
         Authorization: `Bearer ${items.token}`,
-        // other headers if needed
       };
       const response = await axios.post(
         "http://127.0.0.1:8000/api/v1/send-message",
@@ -71,12 +80,13 @@ export default function Message() {
         { headers }
       );
 
-      console.log("data", response.data);
-
       if (response?.status === 201) {
-        socket.emit("sendChatToClient", {...response.data.data, to: socket.roomId});
+        socket.emit("sendChatToClient", {
+          ...response.data.data,
+          to: socket.roomId,
+        });
         setMessage("");
-        // selectMessages(data);
+        //selectMessages(data);
       } else {
         toast.warning("warning", response?.status);
       }
@@ -100,7 +110,7 @@ export default function Message() {
             <div className="flex flex-col h-full">
               <div className="grid grid-cols-12 gap-y-2">
                 {/* {console.log("All Message final result", allMessages)} */}
-                {allMessages?.map((message) => {
+                {messages?.map((message) => {
                   const isSender = message.from_user_id === authUser.id;
                   const messageClass = isSender
                     ? "col-start-6 col-end-13"
@@ -133,6 +143,7 @@ export default function Message() {
                   );
                 })}
               </div>
+              <div ref={messagesEndRef} />
             </div>
           </div>
           <div className="flex flex-row items-center h-16 rounded-xl bg-white w-full px-4">
